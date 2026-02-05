@@ -25,7 +25,7 @@ app.use(express.json());
 //     const requestHeaders = { ...DEFAULT_HEADERS };
 
 //     const QueryString = `
-//     SELECT TOP 10 E.Subject AS Subject, E.StartTime AS StartTime, E.EndTime AS EndTime, E.TakeDownInstruction AS TakeDownInstruction, E.SetupInstruction AS SetupInstruction,E.MaximumCapacity AS MaximumCapacity,  Fa.Name as FaName, Con.PrimaryNumber AS PrimaryNumber, Ad.Street, Ad.city, Ad.PostalCode, Coun.Name AS Country, Stp.Name AS StateProv FROM Custom.CalendarEvent AS E LEFT JOIN Custom.Facility AS F ON E.FacilityId = F.ID LEFT JOIN Custom.FacilityContract AS Fa ON E.FacilityContract = Fa.ID LEFT JOIN Custom.Contact AS Con ON Con.ID = Fa.Contact LEFT JOIN Custom.Location AS Lo ON Lo.ID = E.LocationId LEFT JOIN Custom.Address AS Ad ON Lo.Address = Ad.ID LEFT JOIN Custom.Country AS Coun ON Ad.CountryID = Coun.ID LEFT JOIN Custom.StateProv AS Stp ON Ad.StateProvID = Stp.ID WHERE E.StartTime = '2026-01-22T00:00:00' ORDER BY E.StartTime DESC
+//     SELECT TOP 10 E.Subject AS Subject, E.StartTime AS StartTime, E.EndTime AS EndTime, E.TakeDownInstruction AS TakeDownInstruction, E.SetupInstruction AS SetupInstruction,E.MaximumCapacity AS MaximumCapacity,  FC.Name as FaName, Con.PrimaryNumber AS PrimaryNumber, Ad.Street, Ad.city, Ad.PostalCode, Coun.Name AS Country, Stp.Name AS StateProv FROM Custom.CalendarEvent AS E LEFT JOIN Custom.Facility AS F ON E.FacilityId = F.ID LEFT JOIN Custom.FacilityContract AS FC ON E.FacilityContract = FC.ID LEFT JOIN Custom.Contact AS Con ON Con.ID = FC.Contact LEFT JOIN Custom.Location AS Lo ON Lo.ID = E.LocationId LEFT JOIN Custom.Address AS Ad ON Lo.Address = Ad.ID LEFT JOIN Custom.Country AS Coun ON Ad.CountryID = Coun.ID LEFT JOIN Custom.StateProv AS Stp ON Ad.StateProvID = Stp.ID WHERE E.StartTime = '2026-01-22T00:00:00' ORDER BY E.StartTime DESC
 
 //     `
 
@@ -96,7 +96,7 @@ app.use(express.json());
 //         E.SetupInstruction,
 //         E.MaximumCapacity,
 //         E.ShowTo,
-//         Fa.Name as FaName,
+//         FC.Name as FaName,
 //         Con.PrimaryNumber,
 //         Ad.Street,
 //         Ad.city,
@@ -108,8 +108,8 @@ app.use(express.json());
 //         Stp.Name AS StateProv
 //       FROM Custom.CalendarEvent AS E
 //       LEFT JOIN Custom.Facility AS F ON E.FacilityId = F.ID
-//       LEFT JOIN Custom.FacilityContract AS Fa ON E.FacilityContract = Fa.ID
-//       LEFT JOIN Custom.Contact AS Con ON Con.ID = Fa.Contact
+//       LEFT JOIN Custom.FacilityContract AS FC ON E.FacilityContract = FC.ID
+//       LEFT JOIN Custom.Contact AS Con ON Con.ID = FC.Contact
 //       LEFT JOIN Custom.Location AS Lo ON Lo.ID = E.LocationId
 //       LEFT JOIN Custom.Address AS Ad ON Lo.Address = Ad.ID
 //       LEFT JOIN Custom.Country AS Coun ON Ad.CountryID = Coun.ID
@@ -172,6 +172,45 @@ app.post("/api/call", async (req, res) => {
     if (locationId) filterConditions += ` AND E.LocationId = '${locationId}'`;
 
     // Added COUNT(*) OVER() to get total records matching filters across all pages
+    // const QueryString = `
+    //   SELECT 
+    //     COUNT(*) OVER() AS TotalCount,
+    //     E.ID, 
+    //     E.Subject, 
+    //     E.StartTime, 
+    //     E.EndTime, 
+    //     E.TakeDownInstruction, 
+    //     E.SetupInstruction,
+    //     E.MaximumCapacity, 
+    //     E.ShowTo, 
+    //     FC.Name as FCName, 
+    //     F.RecordName as FRecordName, 
+    //     FLo.Name as FName, 
+    //     Con.PrimaryNumber, 
+    //     Ad.Street, 
+    //     Ad.city, 
+    //     Ad.PostalCode, 
+    //     Coun.Name AS Country,
+    //     pro.Name AS Program,
+    //     CS.Name AS CalendarSetup,
+    //     CS.Category AS CalendarSetupCategory,
+    //     Stp.Name AS StateProv 
+    //   FROM Custom.CalendarEvent AS E 
+    //   LEFT JOIN Custom.Facility AS F ON E.FacilityId = F.ID 
+    //   LEFT JOIN Custom.Location AS FLo ON FLo.ID = F.LocationId
+    //   LEFT JOIN Custom.FacilityContract AS FC ON E.FacilityContract = FC.ID 
+    //   LEFT JOIN Custom.Contact AS Con ON Con.ID = FC.Contact 
+    //   LEFT JOIN Custom.Location AS Lo ON Lo.ID = E.LocationId 
+    //   LEFT JOIN Custom.Address AS Ad ON Lo.Address = Ad.ID 
+    //   LEFT JOIN Custom.Country AS Coun ON Ad.CountryID = Coun.ID 
+    //   LEFT JOIN Custom.StateProv AS Stp ON Ad.StateProvID = Stp.ID
+    //   LEFT JOIN Custom.Program AS Pro ON E.ProgramId = Pro.ID
+    //   LEFT JOIN Custom.CalendarSetup AS CS ON E.CalendarSetupId = CS.ID
+    //   ${filterConditions} 
+    //   ORDER BY E.StartTime DESC
+    //   OFFSET ${offset} ROWS
+    //   FETCH NEXT ${validatedPageSize} ROWS ONLY
+    // `;
     const QueryString = `
       SELECT 
         COUNT(*) OVER() AS TotalCount,
@@ -179,24 +218,14 @@ app.post("/api/call", async (req, res) => {
         E.Subject, 
         E.StartTime, 
         E.EndTime, 
-        E.TakeDownInstruction, 
-        E.SetupInstruction,
-        E.MaximumCapacity, 
-        E.ShowTo, 
-        Fa.Name as FaName, 
-        Con.PrimaryNumber, 
-        Ad.Street, 
-        Ad.city, 
-        Ad.PostalCode, 
-        Coun.Name AS Country,
-        pro.Name AS Program,
-        CS.Name AS CalendarSetup,
-        CS.Category AS CalendarSetupCategory,
-        Stp.Name AS StateProv 
+        FC.Name as FCName, 
+        F.RecordName as FRecordName, 
+        FLo.Name as FName
       FROM Custom.CalendarEvent AS E 
       LEFT JOIN Custom.Facility AS F ON E.FacilityId = F.ID 
-      LEFT JOIN Custom.FacilityContract AS Fa ON E.FacilityContract = Fa.ID 
-      LEFT JOIN Custom.Contact AS Con ON Con.ID = Fa.Contact 
+      LEFT JOIN Custom.Location AS FLo ON FLo.ID = F.LocationId
+      LEFT JOIN Custom.FacilityContract AS FC ON E.FacilityContract = FC.ID 
+      LEFT JOIN Custom.Contact AS Con ON Con.ID = FC.Contact 
       LEFT JOIN Custom.Location AS Lo ON Lo.ID = E.LocationId 
       LEFT JOIN Custom.Address AS Ad ON Lo.Address = Ad.ID 
       LEFT JOIN Custom.Country AS Coun ON Ad.CountryID = Coun.ID 
@@ -260,10 +289,6 @@ app.get("/api/location", async (req, res) => {
   }
 });
 
-// Health check endpoint
-app.get("/health", (req, res) => {
-  res.json({ status: "OK", message: "Server is running" });
-});
 
 // Health check endpoint
 app.get("/health", (req, res) => {
