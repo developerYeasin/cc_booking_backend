@@ -216,6 +216,7 @@ app.post("/api/call", async (req, res) => {
         COUNT(*) OVER() AS TotalCount,
         E.ID, 
         E.Subject, 
+        E.EventStatus, 
         E.StartTime, 
         E.EndTime, 
         FC.Name as FCName, 
