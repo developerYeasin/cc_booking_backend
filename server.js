@@ -144,6 +144,133 @@ app.use(express.json());
 //   }
 // });
 
+// app.post("/api/call", async (req, res) => {
+//   try {
+//     const {
+//       path = "Query",
+//       method = "POST",
+//       page = 1,
+//       pageSize = 10,
+//       startDate,
+//       endDate,
+//       locationId,
+//       EventStatus,
+//     } = req.body;
+
+//     const url = BASE_URL + path;
+//     const requestHeaders = { ...DEFAULT_HEADERS };
+
+//     const validatedPage = Math.max(1, parseInt(page));
+//     // const validatedPage = parseInt(page);
+//     const validatedPageSize = parseInt(pageSize);
+//     const offset = (validatedPage - 1) * validatedPageSize;
+
+//     let filterConditions = "WHERE 1=1";
+//     // filterConditions += ` AND FC.Name = 'Burton, Mark'`;
+//     if (startDate)
+//       filterConditions += ` AND E.StartTime >= '${startDate}T00:00:00'`;
+//     if (endDate)
+//       filterConditions += ` AND E.StartTime <= '${endDate}T23:59:59'`;
+//     if (locationId) filterConditions += ` AND E.LocationId = '${locationId}'`;
+//     if (EventStatus) filterConditions += ` AND E.EventStatus = '${EventStatus}'`;
+
+//     // Added COUNT(*) OVER() to get total records matching filters across all pages
+//     // const QueryString = `
+//     //   SELECT
+//     //     COUNT(*) OVER() AS TotalCount,
+//     //     E.ID,
+//     //     E.Subject,
+//     //     E.StartTime,
+//     //     E.EndTime,
+//     //     E.TakeDownInstruction,
+//     //     E.SetupInstruction,
+//     //     E.MaximumCapacity,
+//     //     E.ShowTo,
+//     //     FC.Name as FCName,
+//     //     F.RecordName as FRecordName,
+//     //     FLo.Name as FName,
+//     //     Con.PrimaryNumber,
+//     //     Ad.Street,
+//     //     Ad.city,
+//     //     Ad.PostalCode,
+//     //     Coun.Name AS Country,
+//     //     pro.Name AS Program,
+//     //     CS.Name AS CalendarSetup,
+//     //     CS.Category AS CalendarSetupCategory,
+//     //     Stp.Name AS StateProv
+//     //   FROM Custom.CalendarEvent AS E
+//     //   LEFT JOIN Custom.Facility AS F ON E.FacilityId = F.ID
+//     //   LEFT JOIN Custom.Location AS FLo ON FLo.ID = F.LocationId
+//     //   LEFT JOIN Custom.FacilityContract AS FC ON E.FacilityContract = FC.ID
+//     //   LEFT JOIN Custom.Contact AS Con ON Con.ID = FC.Contact
+//     //   LEFT JOIN Custom.Location AS Lo ON Lo.ID = E.LocationId
+//     //   LEFT JOIN Custom.Address AS Ad ON Lo.Address = Ad.ID
+//     //   LEFT JOIN Custom.Country AS Coun ON Ad.CountryID = Coun.ID
+//     //   LEFT JOIN Custom.StateProv AS Stp ON Ad.StateProvID = Stp.ID
+//     //   LEFT JOIN Custom.Program AS Pro ON E.ProgramId = Pro.ID
+//     //   LEFT JOIN Custom.CalendarSetup AS CS ON E.CalendarSetupId = CS.ID
+//     //   ${filterConditions}
+//     //   ORDER BY E.StartTime DESC
+//     //   OFFSET ${offset} ROWS
+//     //   FETCH NEXT ${validatedPageSize} ROWS ONLY
+//     // `;
+//     const QueryString = `
+//       SELECT 
+//         COUNT(*) OVER() AS TotalCount,
+//         E.ID, 
+//         E.Subject, 
+//         E.EventStatus, 
+//         E.StartTime, 
+//         E.EndTime, 
+//         FC.Name as FCName, 
+//         F.RecordName as FRecordName, 
+//         FLo.Name as FName
+//       FROM Custom.CalendarEvent AS E 
+//       LEFT JOIN Custom.Facility AS F ON E.FacilityId = F.ID 
+//       LEFT JOIN Custom.Location AS FLo ON FLo.ID = F.LocationId
+//       LEFT JOIN Custom.FacilityContract AS FC ON E.FacilityContract = FC.ID 
+//       LEFT JOIN Custom.Contact AS Con ON Con.ID = FC.Contact 
+//       LEFT JOIN Custom.Location AS Lo ON Lo.ID = E.LocationId 
+//       LEFT JOIN Custom.Address AS Ad ON Lo.Address = Ad.ID 
+//       LEFT JOIN Custom.Country AS Coun ON Ad.CountryID = Coun.ID 
+//       LEFT JOIN Custom.StateProv AS Stp ON Ad.StateProvID = Stp.ID
+//       LEFT JOIN Custom.Program AS Pro ON E.ProgramId = Pro.ID
+//       LEFT JOIN Custom.CalendarSetup AS CS ON E.CalendarSetupId = CS.ID
+//       ${filterConditions} 
+//       ORDER BY E.StartTime DESC
+//       OFFSET ${offset} ROWS
+//       FETCH NEXT ${validatedPageSize} ROWS ONLY
+//     `;
+
+//     console.log("QueryString:", QueryString);
+//     const config = {
+//       method: method.toUpperCase(),
+//       url,
+//       headers: requestHeaders,
+//       data: { QueryString },
+//     };
+
+//     const response = await axios(config);
+
+//     // Extract totalCount from the first row of data (if data exists)
+//     const totalCount =
+//       response.data.length > 0 ? response.data[0].TotalCount : 0;
+
+//     res.json({
+//       status: response.status,
+//       page: validatedPage,
+//       pageSize: validatedPageSize,
+//       totalCount: totalCount,
+//       data: response.data,
+//     });
+//   } catch (error) {
+//     console.error("API call error:", error.message);
+//     res.status(500).json({ error: error.message });
+//   }
+// });
+
+
+
 app.post("/api/call", async (req, res) => {
   try {
     const {
@@ -153,115 +280,85 @@ app.post("/api/call", async (req, res) => {
       pageSize = 10,
       startDate,
       endDate,
-      locationId,
+      userTimeZone = 'America/Chicago', // Default or from req.body
     } = req.body;
 
     const url = BASE_URL + path;
-    const requestHeaders = { ...DEFAULT_HEADERS };
-
     const validatedPage = Math.max(1, parseInt(page));
-    // const validatedPage = parseInt(page);
     const validatedPageSize = parseInt(pageSize);
     const offset = (validatedPage - 1) * validatedPageSize;
 
-    let filterConditions = "WHERE 1=1";
-    if (startDate)
-      filterConditions += ` AND E.StartTime >= '${startDate}T00:00:00'`;
-    if (endDate)
-      filterConditions += ` AND E.StartTime <= '${endDate}T23:59:59'`;
-    if (locationId) filterConditions += ` AND E.LocationId = '${locationId}'`;
+    // Mapping variables to SQL parameters
+    const fromDate = startDate ? `${startDate}T00:00:00` : '1900-01-01';
+    const toDate = endDate ? `${endDate}T23:59:59` : '2100-12-31';
 
-    // Added COUNT(*) OVER() to get total records matching filters across all pages
-    // const QueryString = `
-    //   SELECT 
-    //     COUNT(*) OVER() AS TotalCount,
-    //     E.ID, 
-    //     E.Subject, 
-    //     E.StartTime, 
-    //     E.EndTime, 
-    //     E.TakeDownInstruction, 
-    //     E.SetupInstruction,
-    //     E.MaximumCapacity, 
-    //     E.ShowTo, 
-    //     FC.Name as FCName, 
-    //     F.RecordName as FRecordName, 
-    //     FLo.Name as FName, 
-    //     Con.PrimaryNumber, 
-    //     Ad.Street, 
-    //     Ad.city, 
-    //     Ad.PostalCode, 
-    //     Coun.Name AS Country,
-    //     pro.Name AS Program,
-    //     CS.Name AS CalendarSetup,
-    //     CS.Category AS CalendarSetupCategory,
-    //     Stp.Name AS StateProv 
-    //   FROM Custom.CalendarEvent AS E 
-    //   LEFT JOIN Custom.Facility AS F ON E.FacilityId = F.ID 
-    //   LEFT JOIN Custom.Location AS FLo ON FLo.ID = F.LocationId
-    //   LEFT JOIN Custom.FacilityContract AS FC ON E.FacilityContract = FC.ID 
-    //   LEFT JOIN Custom.Contact AS Con ON Con.ID = FC.Contact 
-    //   LEFT JOIN Custom.Location AS Lo ON Lo.ID = E.LocationId 
-    //   LEFT JOIN Custom.Address AS Ad ON Lo.Address = Ad.ID 
-    //   LEFT JOIN Custom.Country AS Coun ON Ad.CountryID = Coun.ID 
-    //   LEFT JOIN Custom.StateProv AS Stp ON Ad.StateProvID = Stp.ID
-    //   LEFT JOIN Custom.Program AS Pro ON E.ProgramId = Pro.ID
-    //   LEFT JOIN Custom.CalendarSetup AS CS ON E.CalendarSetupId = CS.ID
-    //   ${filterConditions} 
-    //   ORDER BY E.StartTime DESC
-    //   OFFSET ${offset} ROWS
-    //   FETCH NEXT ${validatedPageSize} ROWS ONLY
-    // `;
     const QueryString = `
-      SELECT 
+      SELECT
         COUNT(*) OVER() AS TotalCount,
-        E.ID, 
-        E.Subject, 
-        E.EventStatus, 
-        E.StartTime, 
-        E.EndTime, 
-        FC.Name as FCName, 
-        F.RecordName as FRecordName, 
-        FLo.Name as FName
-      FROM Custom.CalendarEvent AS E 
-      LEFT JOIN Custom.Facility AS F ON E.FacilityId = F.ID 
-      LEFT JOIN Custom.Location AS FLo ON FLo.ID = F.LocationId
-      LEFT JOIN Custom.FacilityContract AS FC ON E.FacilityContract = FC.ID 
-      LEFT JOIN Custom.Contact AS Con ON Con.ID = FC.Contact 
-      LEFT JOIN Custom.Location AS Lo ON Lo.ID = E.LocationId 
-      LEFT JOIN Custom.Address AS Ad ON Lo.Address = Ad.ID 
-      LEFT JOIN Custom.Country AS Coun ON Ad.CountryID = Coun.ID 
-      LEFT JOIN Custom.StateProv AS Stp ON Ad.StateProvID = Stp.ID
-      LEFT JOIN Custom.Program AS Pro ON E.ProgramId = Pro.ID
-      LEFT JOIN Custom.CalendarSetup AS CS ON E.CalendarSetupId = CS.ID
-      ${filterConditions} 
-      ORDER BY E.StartTime DESC
+        Master.dbo.ConvertToTimeZoneDate(EO.StartTime, '${userTimeZone}') AS [StartDate],
+        Master.dbo.ConvertToTimeZoneDate(EO.EndTime, '${userTimeZone}') AS [EndDate],
+        ISNULL(CE.Subject, '') AS [Subject],
+        ISNULL(CL.Name, '') AS [Location],
+        CASE 
+          WHEN ISNULL(CF.RecordName, '') LIKE '%Front Desk%' THEN aff.RecordName 
+          ELSE ISNULL(CF.RecordName, '') 
+        END AS [Facility],
+        ISNULL(CP.Name, '') AS [Service],
+        ISNULL(CT.FullName, '') AS [Staff],
+        CS.Name AS [Calendar]
+      FROM Custom.EventOccurrence EO
+      INNER JOIN Custom.CalendarEvent CE ON EO.ParentEventId = CE.ID
+      LEFT JOIN Custom.Location CL ON CE.LocationId = CL.ID
+      LEFT JOIN Custom.Facility CF ON CE.FacilityId = CF.ID
+      LEFT JOIN Custom.Program CP ON CE.ProgramId = CP.ID
+      LEFT JOIN Custom.CalendarSetup CS ON CE.CalendarSetupID = CS.ID
+      LEFT JOIN Custom.Teachers CT ON CE.InstructorID = CT.ID
+      LEFT JOIN Custom.AdditionalFacility af ON CE.ID = af.CalendarEvent
+      LEFT JOIN Custom.Facility aff ON af.Facility = aff.ID
+      WHERE aff.RecordName NOT LIKE '%Front Desk%'
+        AND Master.dbo.ConvertToTimeZoneDate(EO.StartTime, '${userTimeZone}') >= '${fromDate}'
+        AND Master.dbo.ConvertToTimeZoneDate(EO.StartTime, '${userTimeZone}') < '${toDate}'
+        AND EO.StartTime <> EO.EndTime
+        AND CL.Name IN (
+          'FFUN PERFORMANCE CENTRE ', 'Gordie Howe Sports Centre', 
+          'Gordie Howe Sports Complex', 'Baseball Diamonds', 
+          'Cross Country Ski Area', 'Indoor Training Centre', 
+          'K+S Multi-Sports Centre', 'Saskatoon Minor Football Field', 
+          'Softball Diamonds', 'Track and Speed Skating Area'
+        )
+        AND CE.[EventStatus] != '3'
+        AND ISNULL(EO.Status, CE.EventStatus) != 3
+        AND EO.Status != '99'
+        AND (
+          CE.RecurrenceID IS NULL OR
+          CE.RecurrenceID NOT IN (
+            SELECT RecurrenceID FROM [Framework].[DeleteOccurrence] 
+            WHERE Date BETWEEN '${fromDate}' AND '${toDate}'
+          )
+        )
+      ORDER BY EO.StartTime, EO.EndTime, CE.FacilityId, CE.Subject ASC
       OFFSET ${offset} ROWS
       FETCH NEXT ${validatedPageSize} ROWS ONLY
     `;
 
-    console.log("QueryString:", QueryString);
     const config = {
       method: method.toUpperCase(),
       url,
-      headers: requestHeaders,
+      headers: { ...DEFAULT_HEADERS },
       data: { QueryString },
     };
 
     const response = await axios(config);
-
-    // Extract totalCount from the first row of data (if data exists)
-    const totalCount =
-      response.data.length > 0 ? response.data[0].TotalCount : 0;
+    const totalCount = response.data.length > 0 ? response.data[0].TotalCount : 0;
 
     res.json({
       status: response.status,
       page: validatedPage,
       pageSize: validatedPageSize,
-      totalCount: totalCount,
+      totalCount,
       data: response.data,
     });
   } catch (error) {
-    console.error("API call error:", error.message);
     res.status(500).json({ error: error.message });
   }
 });
@@ -289,7 +386,6 @@ app.get("/api/location", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
 
 // Health check endpoint
 app.get("/health", (req, res) => {
