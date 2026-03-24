@@ -297,6 +297,8 @@ app.post("/api/call", async (req, res) => {
         COUNT(*) OVER() AS TotalCount,
         Master.dbo.ConvertToTimeZoneDate(EO.StartTime, '${userTimeZone}') AS [StartDate],
         Master.dbo.ConvertToTimeZoneDate(EO.EndTime, '${userTimeZone}') AS [EndDate],
+        EO.StartTime AS StartTime,
+        EO.EndTime AS EndTime,
         ISNULL(CE.Subject, '') AS [Subject],
         ISNULL(CL.Name, '') AS [Location],
         CASE 
