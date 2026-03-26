@@ -292,6 +292,59 @@ app.post("/api/call", async (req, res) => {
     const fromDate = startDate ? `${startDate}T00:00:00` : '1900-01-01';
     const toDate = endDate ? `${endDate}T23:59:59` : '2100-12-31';
 
+    // const QueryString = `
+    //   SELECT
+    //     COUNT(*) OVER() AS TotalCount,
+    //     Master.dbo.ConvertToTimeZoneDate(EO.StartTime, '${userTimeZone}') AS [StartDate],
+    //     Master.dbo.ConvertToTimeZoneDate(EO.EndTime, '${userTimeZone}') AS [EndDate],
+    //     EO.StartTime AS StartTime,
+    //     EO.EndTime AS EndTime,
+    //     ISNULL(CE.Subject, '') AS [Subject],
+    //     ISNULL(CL.Name, '') AS [Location],
+    //     CASE 
+    //       WHEN ISNULL(CF.RecordName, '') LIKE '%Front Desk%' THEN aff.RecordName 
+    //       ELSE ISNULL(CF.RecordName, '') 
+    //     END AS [Facility],
+    //     ISNULL(CP.Name, '') AS [Service],
+    //     ISNULL(CT.FullName, '') AS [Staff],
+    //     CS.Name AS [Calendar]
+    //   FROM Custom.EventOccurrence EO
+    //   INNER JOIN Custom.CalendarEvent CE ON EO.ParentEventId = CE.ID
+    //   LEFT JOIN Custom.Location CL ON CE.LocationId = CL.ID
+    //   LEFT JOIN Custom.Facility CF ON CE.FacilityId = CF.ID
+    //   LEFT JOIN Custom.Program CP ON CE.ProgramId = CP.ID
+    //   LEFT JOIN Custom.CalendarSetup CS ON CE.CalendarSetupID = CS.ID
+    //   LEFT JOIN Custom.Teachers CT ON CE.InstructorID = CT.ID
+    //   LEFT JOIN Custom.AdditionalFacility af ON CE.ID = af.CalendarEvent
+    //   LEFT JOIN Custom.Facility aff ON af.Facility = aff.ID
+    //   WHERE aff.RecordName NOT LIKE '%Front Desk%'
+    //     AND Master.dbo.ConvertToTimeZoneDate(EO.StartTime, '${userTimeZone}') >= '${fromDate}'
+    //     AND Master.dbo.ConvertToTimeZoneDate(EO.StartTime, '${userTimeZone}') < '${toDate}'
+    //     AND EO.StartTime <> EO.EndTime
+    //     AND CL.Name IN (
+    //       'FFUN PERFORMANCE CENTRE ', 'Gordie Howe Sports Centre', 
+    //       'Gordie Howe Sports Complex', 'Baseball Diamonds', 
+    //       'Cross Country Ski Area', 'Indoor Training Centre', 
+    //       'K+S Multi-Sports Centre', 'Saskatoon Minor Football Field', 
+    //       'Softball Diamonds', 'Track and Speed Skating Area'
+    //     )
+        // AND CE.[EventStatus] != '3'
+        // AND ISNULL(EO.Status, CE.EventStatus) != 3
+        // AND EO.Status != '99'
+    //     AND (
+    //       CE.RecurrenceID IS NULL OR
+    //       CE.RecurrenceID NOT IN (
+    //         SELECT RecurrenceID FROM [Framework].[DeleteOccurrence] 
+    //         WHERE Date BETWEEN '${fromDate}' AND '${toDate}'
+    //       )
+    //     )
+    //   ORDER BY EO.StartTime, EO.EndTime, CE.FacilityId, CE.Subject ASC
+    //   OFFSET ${offset} ROWS
+    //   FETCH NEXT ${validatedPageSize} ROWS ONLY
+    // `;
+
+   
+    
     const QueryString = `
       SELECT
         COUNT(*) OVER() AS TotalCount,
@@ -320,7 +373,7 @@ app.post("/api/call", async (req, res) => {
       WHERE aff.RecordName NOT LIKE '%Front Desk%'
         AND Master.dbo.ConvertToTimeZoneDate(EO.StartTime, '${userTimeZone}') >= '${fromDate}'
         AND Master.dbo.ConvertToTimeZoneDate(EO.StartTime, '${userTimeZone}') < '${toDate}'
-        AND EO.StartTime <> EO.EndTime
+        
         AND CL.Name IN (
           'FFUN PERFORMANCE CENTRE ', 'Gordie Howe Sports Centre', 
           'Gordie Howe Sports Complex', 'Baseball Diamonds', 
@@ -328,17 +381,12 @@ app.post("/api/call", async (req, res) => {
           'K+S Multi-Sports Centre', 'Saskatoon Minor Football Field', 
           'Softball Diamonds', 'Track and Speed Skating Area'
         )
+
         AND CE.[EventStatus] != '3'
         AND ISNULL(EO.Status, CE.EventStatus) != 3
         AND EO.Status != '99'
-        AND (
-          CE.RecurrenceID IS NULL OR
-          CE.RecurrenceID NOT IN (
-            SELECT RecurrenceID FROM [Framework].[DeleteOccurrence] 
-            WHERE Date BETWEEN '${fromDate}' AND '${toDate}'
-          )
-        )
-      ORDER BY EO.StartTime, EO.EndTime, CE.FacilityId, CE.Subject ASC
+
+        ORDER BY EO.StartTime, EO.EndTime, CE.FacilityId, CE.Subject ASC
       OFFSET ${offset} ROWS
       FETCH NEXT ${validatedPageSize} ROWS ONLY
     `;
